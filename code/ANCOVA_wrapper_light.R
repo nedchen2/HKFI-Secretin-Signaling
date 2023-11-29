@@ -351,49 +351,6 @@ ancova_post_hoc <- function(file = "../../HKFI-FoodIntake/code/ABCdata.tsv",
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-pairwise_comparison_after_emmeans <- function (res.emmeans, 
-                                               grouping.vars = NULL, 
-                                               method = "pairwise", 
-                                               p.adjust.method = "bonferroni", conf.level = 0.95) 
-{
-  comparisons <- emmeans::contrast(res.emmeans, by = grouping.vars, 
-                                   method = method, adjust = "none")
-  comparisons <- tidy(comparisons, conf.int = TRUE, conf.level = conf.level)
-  comparisons <- comparisons %>% tidyr::separate(col = "contrast", 
-                                                 into = c("group1", "group2"), sep = "-") %>% dplyr::rename(se = "std.error", 
-                                                                                                            p = "p.value") %>% dplyr::select(!!!syms(grouping.vars), 
-                                                                                                                                             everything())
-  p.adjusted <- emmeans::contrast(res.emmeans, by = grouping.vars, 
-                                  method = method, adjust = p.adjust.method) %>% as.data.frame() %>% 
-    pull("p.value")
-  comparisons <- comparisons %>% mutate(p.adj = p.adjusted) %>% 
-    add_significance("p.adj")
-  res.emmeans.tbl <- tibble::as_tibble(res.emmeans)
-  variables <- intersect(colnames(res.emmeans.tbl), colnames(comparisons))
-  for (variable in variables) {
-    if (is.factor(res.emmeans.tbl[[variable]])) {
-      comparisons[[variable]] <- factor(comparisons[[variable]], 
-                                        levels = levels(res.emmeans.tbl[[variable]]))
-    }
-  }
-  comparisons <- base::droplevels(comparisons)
-  comparisons %>% dplyr::arrange(!!!syms(grouping.vars))
-  return(comparisons)
-}
-
 ancova_post_hoc_EE <- function(file = "../../HKFI-FoodIntake/code/ABCdata.tsv",
                             name = "Figure1"){
   library(multcomp)
@@ -747,50 +704,6 @@ ancova_post_hoc_EE <- function(file = "../../HKFI-FoodIntake/code/ABCdata.tsv",
     plot_layout(ncol = 2, nrow = 2, widths = c(4, 1), heights = c(1, 4))
   
   ggsave(p_report1 , filename = paste0("../../HKFI-FoodIntake/results/",name,"/ABC_scatter_with_density.png"), dpi = 320)
-  
-}
-
-
-
-source_1 <- function(){
-  
-
-  
-  require(reghelper)
-  # ancova_model
-  model = lm(foodIntake ~ Bodyweight * Group, data = dataABC)
-  
-  simple_slopes(model)
-  
-  as.data.frame(state.x77)
-  
-  
-  # === use linear model == 
-  points = dataABC %>% mutate(group = Group)
-  if (is.factor(points[,"group"])){
-    group_list = unique(points[,"group"]) %>% unlist()%>% as.vector()
-  }else{
-    group_list = unique(points[,"group"]) %>% unlist() %>% as.vector()
-  }
-  possible_combinations = sets::set_power(group_list) %>% as.vector() 
-  compared_group = list()
-  for (i in seq(length(possible_combinations))){
-    result_c = possible_combinations[[i]] %>% as.character()
-    if (length(result_c) == length(group_list)-2){
-      sub_compared_group = group_list[!group_list %in% result_c]
-      compared_group[[length(compared_group)+1]] =  sub_compared_group 
-    }
-  }
-  
-  print(compared_group)  
-  
-  stat.test = data.frame(group1 = character(), group2 = character(), pval = character(), direction = character())
-  for (x in compared_group){
-    model = lm(data = dataABC %>% dplyr::filter(Group %in% x), formula = foodIntake ~ Group + Bodyweight)
-    result = summary(model)
-    stat.test[nrow(stat.test) + 1,] = c(x[1],x[2],result$coefficients[2,4],sign(result$coefficients[2,1]))                                    
-  }
-  
   
 }
 
